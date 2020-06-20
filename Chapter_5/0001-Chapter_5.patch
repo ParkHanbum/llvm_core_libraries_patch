@@ -1,0 +1,80 @@
+From feab4159f1126328c280d08f7144c0d02d703053 Mon Sep 17 00:00:00 2001
+From: Hanbum Park <kese111@gmail.com>
+Date: Sat, 20 Jun 2020 18:36:32 +0900
+Subject: [PATCH] Chapter_5
+
+---
+ Chapter_5/FnArgCnt.cpp |  2 +-
+ Chapter_5/Makefile     | 20 +++++++++++++++-----
+ Chapter_5/sum.c        | 10 ++++++++++
+ 3 files changed, 26 insertions(+), 6 deletions(-)
+ create mode 100644 Chapter_5/sum.c
+
+diff --git a/Chapter_5/FnArgCnt.cpp b/Chapter_5/FnArgCnt.cpp
+index 069f286..f13b00e 100755
+--- a/Chapter_5/FnArgCnt.cpp
++++ b/Chapter_5/FnArgCnt.cpp
+@@ -17,7 +17,7 @@ namespace {
+     virtual bool runOnFunction(Function &F) {
+       errs() << "FnArgCnt --- ";
+       errs() << F.getName() << ": ";
+-      errs() << F.getArgumentList().size() << '\n';
++      errs() << F.arg_size() << '\n';
+       return false;
+     }
+   };
+diff --git a/Chapter_5/Makefile b/Chapter_5/Makefile
+index caab751..758933c 100755
+--- a/Chapter_5/Makefile
++++ b/Chapter_5/Makefile
+@@ -18,16 +18,26 @@ endif
+ 
+ FNARGPASS=fnarg.so
+ FNARGPASS_OBJECTS=FnArgCnt.o
++BITCODE_SRC := sum.c
++BITCODE := sum.bc
+ 
+ default: $(FNARGPASS)
+ 
+ %.o : $(SRC_DIR)/%.cpp
+-	@echo Compiling $*.cpp
+-	$(QUIET)$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $<
++	@echo 2. Compile $@ by Compiling $*.cpp
++	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $<
+ 
+ $(FNARGPASS) : $(FNARGPASS_OBJECTS)
+-	@echo Linking $@
+-	$(QUIET)$(CXX) -o $@ $(LOADABLE_MODULE_OPTIONS) $(CXXFLAGS) $(LDFLAGS) $^
++	@echo 3. Linking $@ with LLVM libraries
++	$(CXX) -o $@ $(LOADABLE_MODULE_OPTIONS) $(CXXFLAGS) $(LDFLAGS) $^
++
++$(BITCODE):
++	@echo 1. Compile $(BITCODE_SRC) to make bitcode $(BITCODE)
++	clang -emit-llvm -o $@ -c $(BITCODE_SRC)
++
++run:: $(BITCODE) $(FNARGPASS)
++	@echo 4. run opt with my llvm module fnargcnt with $(BITCODE)
++	opt -load=$(SRC_DIR)/$(FNARGPASS) -fnargcnt < $(BITCODE) > /dev/null
+ 
+ clean::
+-	$(QUIET)rm -rf $(FNARGPASS_OBJECTS) $(FNARGPASS)
++	$(QUIET)rm -rf $(FNARGPASS_OBJECTS) $(FNARGPASS) $(BITCODE)
+diff --git a/Chapter_5/sum.c b/Chapter_5/sum.c
+new file mode 100644
+index 0000000..85029f7
+--- /dev/null
++++ b/Chapter_5/sum.c
+@@ -0,0 +1,10 @@
++
++int sum(int a, int b)
++{
++	return a+b;
++}
++
++int main()
++{
++	return sum(1, 2);
++}
+-- 
+2.17.1
+
